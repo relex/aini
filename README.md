@@ -13,49 +13,49 @@ https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html
 
 ## Public API
 ```go
-// InventoryData contains parsed inventory representation
-// Note: Groups and Hosts fields contain all the groups and hosts, not only top-level
-type InventoryData struct {
-	Groups map[string]*Group
-	Hosts  map[string]*Host
-}
+package aini // import "github.com/relex/aini"
 
-// Group represents ansible group
+
+TYPES
+
 type Group struct {
-	Name     string
-	Vars     map[string]string
-	Hosts    map[string]*Host
-	Children map[string]*Group
-	Parents  map[string]*Group
+        Name     string
+        Vars     map[string]string
+        Hosts    map[string]*Host
+        Children map[string]*Group
+        Parents  map[string]*Group
 }
+    Group represents ansible group
 
-// Host represents ansible host
 type Host struct {
-	Name   string
-	Port   int
-	Vars   map[string]string
-	Groups map[string]*Group
+        Name   string
+        Port   int
+        Vars   map[string]string
+        Groups map[string]*Group
 }
+    Host represents ansible host
 
-// ParseFile parses the file
-func ParseFile(f string) (*InventoryData, error) {
-    ...
+type InventoryData struct {
+        Groups map[string]*Group
+        Hosts  map[string]*Host
 }
+    InventoryData contains parsed inventory representation Note: Groups and
+    Hosts fields contain all the groups and hosts, not only top-level
 
-// Parse using some Reader
-func Parse(r io.Reader) (*InventoryData, error) {
-    ...
-}
+func Parse(r io.Reader) (*InventoryData, error)
+    Parse using some Reader
 
-// Match looks for a hosts that match the pattern
-func (inventory *InventoryData) Match(m string) []*Host {
-    ..
-}
+func ParseFile(f string) (*InventoryData, error)
+    ParseFile parses Inventory represented as a file
 
-// Reconcile ensures inventory basic rules, run after updates
-func (inventory *InventoryData) Reconcile() {
-    ...
-}
+func ParseString(input string) (*InventoryData, error)
+    ParseString parses Inventory represented as a string
+
+func (inventory *InventoryData) Match(m string) []*Host
+    Match looks for a hosts that match the pattern
+
+func (inventory *InventoryData) Reconcile()
+    Reconcile ensures inventory basic rules, run after updates
 ```
 
 ## Usage example
@@ -63,7 +63,7 @@ func (inventory *InventoryData) Reconcile() {
 import (
     "strings"
     
-    "github.com/relex/aini/aini"
+    "github.com/relex/aini"
 )
 
 func main() {
