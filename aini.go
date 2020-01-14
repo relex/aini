@@ -16,6 +16,7 @@ import (
 )
 
 // InventoryData contains parsed inventory representation
+// Note: Groups and Hosts fields contain all the groups and hosts, not only top-level
 type InventoryData struct {
 	Groups map[string]*Group
 	Hosts  map[string]*Host
@@ -38,28 +39,42 @@ type Host struct {
 	Groups map[string]*Group
 }
 
-// ParseFile parses the file
+// ParseFile parses Inventory represented as a file
 func ParseFile(f string) (*InventoryData, error) {
 	bs, err := ioutil.ReadFile(f)
 	if err != nil {
 		return &InventoryData{}, err
 	}
 
-	inventory, err := Parse(bytes.NewReader(bs))
-	if err != nil {
-		return &InventoryData{}, err
-	}
+	return Parse(bytes.NewReader(bs))
+}
 
-	return inventory, nil
+// ParseString parses Inventory represented as a string
+func ParseString(input string) (*InventoryData, error) {
+	return Parse(strings.NewReader(input))
 }
 
 // Parse using some Reader
 func Parse(r io.Reader) (*InventoryData, error) {
 	input := bufio.NewReader(r)
 	inventory := &InventoryData{}
-	inventory.parse(input)
+	err := inventory.parse(input)
+	if err != nil {
+		return inventory, err
+	}
 	inventory.Reconcile()
 	return inventory, nil
+}
+
+// Match looks for a hosts that match the pattern
+func (inventory *InventoryData) Match(m string) []*Host {
+	matchedHosts := make([]*Host, 0)
+	for _, host := range inventory.Hosts {
+		if m, err := path.Match(m, host.Name); err == nil && m {
+			matchedHosts = append(matchedHosts, host)
+		}
+	}
+	return matchedHosts
 }
 
 // Reconcile ensures inventory basic rules, run after updates
@@ -91,17 +106,6 @@ func (inventory *InventoryData) Reconcile() {
 	inventory.Groups["all"] = allGroup
 }
 
-// Match looks for a hosts that match the pattern
-func (inventory *InventoryData) Match(m string) []*Host {
-	matchedHosts := make([]*Host, 0)
-	for _, host := range inventory.Hosts {
-		if m, err := path.Match(m, host.Name); err == nil && m {
-			matchedHosts = append(matchedHosts, host)
-		}
-	}
-	return matchedHosts
-}
-
 type state int
 
 const (
@@ -111,7 +115,7 @@ const (
 )
 
 func (inventory *InventoryData) parse(reader *bufio.Reader) error {
-	// This regex is copy-pasted from ansible sources
+	// This regexp is copy-pasted from ansible sources
 	sectionRegex := regexp.MustCompile(`^\[([^:\]\s]+)(?::(\w+))?\]\s*(?:\#.*)?$`)
 	scanner := bufio.NewScanner(reader)
 	inventory.Groups = make(map[string]*Group)

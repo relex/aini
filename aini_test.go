@@ -212,10 +212,10 @@ func TestVariablesPriority(t *testing.T) {
 func TestHostMatching(t *testing.T) {
 	inventory := parseString(`
 	catfish
-	[web:children]
+	[web:children] # Look, there is a cat in comment!
 	tomcat         # This is a group!
 
-	[tomcat]
+	[tomcat]       # And here is another cat 🐈
 	tomcat
 	tomcat-1
 	cat
