@@ -12,7 +12,7 @@ https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html
 - [X] Nested groups
 
 ## Public API
-```go
+```
 package aini // import "github.com/relex/aini"
 
 
@@ -68,7 +68,7 @@ import (
 
 func main() {
     // Load from string example
-    inventoryReader := strings.NewReader((`
+    inventoryReader := strings.NewReader(`
 	host1:2221
 	[web]
 	host2 ansible_ssh_user=root
