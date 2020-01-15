@@ -129,13 +129,8 @@ func getHosts(line string, group *Group) (map[string]*Host, error) {
 
 // splitKV splits `key=value` into two string: key and value
 func splitKV(kv string) (string, string, error) {
-	parsed, err := shlex.Split(kv)
-	if err != nil {
-		return "", "", err
-	}
-
-	keyval := strings.Split(strings.Join(parsed, ""), "=")
-	if len(keyval) != 2 {
+	keyval := strings.SplitN(kv, "=", 2)
+	if len(keyval) == 1 {
 		return "", "", fmt.Errorf("Bad key=value pair supplied: %s", kv)
 	}
 	return strings.TrimSpace(keyval[0]), strings.TrimSpace(keyval[1]), nil

@@ -2,14 +2,13 @@ package aini
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 )
 
-func parseString(input string) InventoryData {
-	testInput := strings.NewReader(input)
-	i, _ := Parse(testInput)
-	return *i
+func parseString(t *testing.T, input string) *InventoryData {
+	v, err := ParseString(input)
+	assert(t, err == nil, fmt.Sprintf("Error occurred while parsing: %s", err))
+	return v
 }
 
 func (inventory *InventoryData) assertGroupExists(t *testing.T, group string) {
@@ -60,7 +59,7 @@ func assert(t *testing.T, cond bool, msg string) {
 }
 
 func TestBelongToBasicGroups(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	host1:2221 # Comments
 	[web]      # should
 	host2      # be
@@ -99,7 +98,7 @@ func TestBelongToBasicGroups(t *testing.T) {
 }
 
 func TestGroupStructure(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	[web]
 	host1
 
@@ -128,7 +127,7 @@ func TestGroupStructure(t *testing.T) {
 }
 
 func TestHostExpansionFullNumericPattern(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	host-[001:015:3]-web:23
 	`)
 	assert(t, len(v.Hosts) == 5, fmt.Sprintf("There must be 5 hosts in the list, found: %d", len(v.Hosts)))
@@ -142,7 +141,7 @@ func TestHostExpansionFullNumericPattern(t *testing.T) {
 }
 
 func TestHostExpansionFullAlphabeticPattern(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	host-[a:o:3]-web
 	`)
 	v.assertHostExists(t, "host-a-web")
@@ -154,7 +153,7 @@ func TestHostExpansionFullAlphabeticPattern(t *testing.T) {
 }
 
 func TestHostExpansionShortNumericPattern(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	host-[:05]-web
 	`)
 	assert(t, len(v.Hosts) == 6, fmt.Sprintf("There must be 6 hosts in the list, found: %d", len(v.Hosts)))
@@ -167,7 +166,7 @@ func TestHostExpansionShortNumericPattern(t *testing.T) {
 }
 
 func TestHostExpansionShortAlphabeticPattern(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	host-[a:c]-web
 	`)
 	assert(t, len(v.Hosts) == 3, fmt.Sprintf("There must be 3 hosts in the list, found: %d", len(v.Hosts)))
@@ -177,7 +176,7 @@ func TestHostExpansionShortAlphabeticPattern(t *testing.T) {
 }
 
 func TestVariablesPriority(t *testing.T) {
-	v := parseString(`
+	v := parseString(t, `
 	host-ungrouped-with-x x=a
 	host-ungrouped
 
@@ -209,8 +208,17 @@ func TestVariablesPriority(t *testing.T) {
 
 }
 
+func TestVariablesEscaping(t *testing.T) {
+	v := parseString(t, `
+	host ansible_ssh_common_args="-o ProxyCommand='ssh -W %h:%p somehost'" other_var_same_value="-o ProxyCommand='ssh -W %h:%p somehost'" # comment
+	`)
+	v.assertHostExists(t, "host")
+	v.Hosts["host"].assertVar(t, "ansible_ssh_common_args", "-o ProxyCommand='ssh -W %h:%p somehost'")
+	v.Hosts["host"].assertVar(t, "other_var_same_value", "-o ProxyCommand='ssh -W %h:%p somehost'")
+}
+
 func TestHostMatching(t *testing.T) {
-	inventory := parseString(`
+	inventory := parseString(t, `
 	catfish
 	[web:children] # Look, there is a cat in comment!
 	tomcat         # This is a group!

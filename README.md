@@ -12,7 +12,7 @@ https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html
 - [X] Nested groups
 
 ## Public API
-```
+```godoc
 package aini // import "github.com/relex/aini"
 
 
@@ -27,6 +27,9 @@ type Group struct {
 }
     Group represents ansible group
 
+func GroupMapListValues(mymap map[string]*Group) []*Group
+    GroupMapListValues transforms map of Groups into Group list
+
 type Host struct {
         Name   string
         Port   int
@@ -34,6 +37,9 @@ type Host struct {
         Groups map[string]*Group
 }
     Host represents ansible host
+
+func HostMapListValues(mymap map[string]*Host) []*Host
+    HostMapListValues transforms map of Hosts into Host list
 
 type InventoryData struct {
         Groups map[string]*Group
@@ -56,6 +62,7 @@ func (inventory *InventoryData) Match(m string) []*Host
 
 func (inventory *InventoryData) Reconcile()
     Reconcile ensures inventory basic rules, run after updates
+
 ```
 
 ## Usage example

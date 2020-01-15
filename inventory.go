@@ -52,7 +52,7 @@ func (group *Group) getAncestors() []*Group {
 
 	for queue := []*Group{group}; ; {
 		group := queue[0]
-		parentList := mapValuesList(group.Parents)
+		parentList := GroupMapListValues(group.Parents)
 		result = append(result, parentList...)
 		copy(queue, queue[1:])
 		queue = queue[:len(queue)-1]
@@ -62,18 +62,6 @@ func (group *Group) getAncestors() []*Group {
 			return result
 		}
 	}
-}
-
-// mapValuesList transforms map of Groups into Group list
-func mapValuesList(mymap map[string]*Group) []*Group {
-	values := make([]*Group, len(mymap))
-
-	i := 0
-	for _, v := range mymap {
-		values[i] = v
-		i++
-	}
-	return values
 }
 
 // setVarsIfNotExist sets Var for host if it doesn't have it already

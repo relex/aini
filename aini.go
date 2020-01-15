@@ -70,3 +70,27 @@ func (inventory *InventoryData) Match(m string) []*Host {
 	}
 	return matchedHosts
 }
+
+// GroupMapListValues transforms map of Groups into Group list
+func GroupMapListValues(mymap map[string]*Group) []*Group {
+	values := make([]*Group, len(mymap))
+
+	i := 0
+	for _, v := range mymap {
+		values[i] = v
+		i++
+	}
+	return values
+}
+
+// HostMapListValues transforms map of Hosts into Host list
+func HostMapListValues(mymap map[string]*Host) []*Host {
+	values := make([]*Host, len(mymap))
+
+	i := 0
+	for _, v := range mymap {
+		values[i] = v
+		i++
+	}
+	return values
+}
