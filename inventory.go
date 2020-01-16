@@ -46,6 +46,20 @@ func (inventory *InventoryData) getGroup(groupName string) *Group {
 
 }
 
+// getHost return host from inventory if exists or creates empty Host with given name
+func (inventory *InventoryData) getHost(hostName string) *Host {
+	if host, ok := inventory.Hosts[hostName]; ok {
+		return host
+	}
+	return &Host{
+		Name:   hostName,
+		Port:   22,
+		Groups: make(map[string]*Group, 0),
+		Vars:   make(map[string]string, 0),
+	}
+
+}
+
 // getAncestors returns all Ancestors of a given group in level order
 func (group *Group) getAncestors() []*Group {
 	result := make([]*Group, 0)
@@ -69,6 +83,14 @@ func (host *Host) setVarsIfNotExist(vars map[string]string) {
 	for k, v := range vars {
 		if _, ok := host.Vars[k]; !ok {
 			host.Vars[k] = v
+		}
+	}
+}
+
+func addValuesFromMap(m1 map[string]string, m2 map[string]string) {
+	for k, v := range m2 {
+		if m1[k] == "" {
+			m1[k] = v
 		}
 	}
 }

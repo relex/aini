@@ -67,7 +67,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 		}
 
 		if activeState == hostsState {
-			hosts, err := getHosts(line, activeGroup)
+			hosts, err := inventory.getHosts(line, activeGroup)
 			if err != nil {
 				return err
 			}
@@ -96,7 +96,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 }
 
 // getHosts parses given "host" line from inventory
-func getHosts(line string, group *Group) (map[string]*Host, error) {
+func (inventory *InventoryData) getHosts(line string, group *Group) (map[string]*Host, error) {
 	parts, err := shlex.Split(line)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,11 @@ func getHosts(line string, group *Group) (map[string]*Host, error) {
 			vars[k] = v
 		}
 
-		host := &Host{Name: hostname, Port: port, Vars: vars, Groups: map[string]*Group{group.Name: group}}
+		host := inventory.getHost(hostname)
+		host.Port = port
+		host.Groups[group.Name] = group
+		addValuesFromMap(host.Vars, vars)
+
 		result[host.Name] = host
 	}
 	return result, nil

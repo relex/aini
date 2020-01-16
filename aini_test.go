@@ -101,16 +101,20 @@ func TestGroupStructure(t *testing.T) {
 	v := parseString(t, `
 	[web]
 	host1
+	host2
 
 	[web:children]
 	nginx
 	apache
 
 	[nginx]
-	host2
+	host1
+	host3
+	host4
 
 	[apache]
-	host3
+	host5
+	host6
 	`)
 
 	v.assertGroupExists(t, "web")
@@ -123,6 +127,17 @@ func TestGroupStructure(t *testing.T) {
 	v.Groups["web"].assertChildGroupExists(t, "apache")
 	v.Groups["nginx"].assertParentGroupExists(t, "web")
 	v.Groups["apache"].assertParentGroupExists(t, "web")
+
+	v.Groups["web"].assertHostExists(t, "host1")
+	v.Groups["web"].assertHostExists(t, "host2")
+	v.Groups["web"].assertHostExists(t, "host3")
+	v.Groups["web"].assertHostExists(t, "host4")
+	v.Groups["web"].assertHostExists(t, "host5")
+
+	v.Groups["nginx"].assertHostExists(t, "host1")
+
+	v.Hosts["host1"].assertGroupExists(t, "web")
+	v.Hosts["host1"].assertGroupExists(t, "nginx")
 
 }
 
