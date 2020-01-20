@@ -99,13 +99,13 @@ func TestBelongToBasicGroups(t *testing.T) {
 
 func TestGroupStructure(t *testing.T) {
 	v := parseString(t, `
-	[web]
-	host1
-	host2
-
 	[web:children]
 	nginx
 	apache
+	
+	[web]
+	host1
+	host2
 
 	[nginx]
 	host1
@@ -133,6 +133,32 @@ func TestGroupStructure(t *testing.T) {
 	v.Groups["web"].assertHostExists(t, "host3")
 	v.Groups["web"].assertHostExists(t, "host4")
 	v.Groups["web"].assertHostExists(t, "host5")
+
+	v.Groups["nginx"].assertHostExists(t, "host1")
+
+	v.Hosts["host1"].assertGroupExists(t, "web")
+	v.Hosts["host1"].assertGroupExists(t, "nginx")
+
+}
+
+func TestGroupNotExplicitlyDefined(t *testing.T) {
+	v := parseString(t, `
+	[web:children]
+	nginx
+
+	[nginx]
+	host1
+	`)
+
+	v.assertGroupExists(t, "web")
+	v.assertGroupExists(t, "nginx")
+
+	assert(t, len(v.Groups) == 4, "Five groups must present: web, nginx, all, ungrouped")
+
+	v.Groups["web"].assertChildGroupExists(t, "nginx")
+	v.Groups["nginx"].assertParentGroupExists(t, "web")
+
+	v.Groups["web"].assertHostExists(t, "host1")
 
 	v.Groups["nginx"].assertHostExists(t, "host1")
 

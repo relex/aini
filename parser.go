@@ -45,7 +45,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 	inventory.Groups = make(map[string]*Group)
 	inventory.Hosts = make(map[string]*Host)
 	activeState := hostsState
-	activeGroup := inventory.getGroup("ungrouped")
+	activeGroup := inventory.getOrCreateGroup("ungrouped")
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -54,8 +54,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 		}
 		matches := sectionRegex.FindAllStringSubmatch(line, -1)
 		if matches != nil {
-			inventory.Groups[activeGroup.Name] = activeGroup
-			activeGroup = inventory.getGroup(matches[0][1])
+			activeGroup = inventory.getOrCreateGroup(matches[0][1])
 			var ok bool
 			if activeState, ok = getState(matches[0][2]); !ok {
 				return fmt.Errorf("Section [%s] has unknown type: %s", line, matches[0][2])
@@ -79,7 +78,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			}
 		}
 		if activeState == childrenState {
-			newGroup := inventory.getGroup(line)
+			newGroup := inventory.getOrCreateGroup(line)
 			newGroup.Parents[activeGroup.Name] = activeGroup
 			inventory.Groups[line] = newGroup
 		}
@@ -121,7 +120,7 @@ func (inventory *InventoryData) getHosts(line string, group *Group) (map[string]
 			vars[k] = v
 		}
 
-		host := inventory.getHost(hostname)
+		host := inventory.getOrCreateHost(hostname)
 		host.Port = port
 		host.Groups[group.Name] = group
 		addValuesFromMap(host.Vars, vars)
