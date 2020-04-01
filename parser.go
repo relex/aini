@@ -215,7 +215,7 @@ func expandHostPattern(hostpattern string) ([]string, error) {
 		return nil, fmt.Errorf("Bad range specified: %s", nrange)
 	}
 
-	var result []string
+	var hosts []string
 	var format string
 	if isNumberRange {
 		format = fmt.Sprintf("%%s%%0%dd%%s", len(begin))
@@ -224,8 +224,18 @@ func expandHostPattern(hostpattern string) ([]string, error) {
 	}
 
 	for _, c := range chars {
-		result = append(result, fmt.Sprintf(format, head, c, tail))
+		hosts = append(hosts, fmt.Sprintf(format, head, c, tail))
 	}
+
+	var result []string
+	for _, hostpattern := range hosts {
+		newHosts, err := expandHostPattern(hostpattern)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, newHosts...)
+	}
+
 	return result, nil
 }
 

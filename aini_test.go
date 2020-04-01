@@ -216,6 +216,17 @@ func TestHostExpansionShortAlphabeticPattern(t *testing.T) {
 	v.assertHostExists(t, "host-c-web")
 }
 
+func TestHostExpansionMultiplePatterns(t *testing.T) {
+	v := parseString(t, `
+	host-[1:2]-[a:b]-web
+	`)
+	assert(t, len(v.Hosts) == 4, fmt.Sprintf("There must be 4 hosts in the list, found: %d", len(v.Hosts)))
+	v.assertHostExists(t, "host-1-a-web")
+	v.assertHostExists(t, "host-1-b-web")
+	v.assertHostExists(t, "host-2-a-web")
+	v.assertHostExists(t, "host-2-b-web")
+}
+
 func TestVariablesPriority(t *testing.T) {
 	v := parseString(t, `
 	host-ungrouped-with-x x=a
