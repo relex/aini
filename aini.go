@@ -17,6 +17,7 @@ type InventoryData struct {
 }
 
 // Group represents ansible group
+// Note: Hosts field lists only direct members of the group, members of children groups are not included
 type Group struct {
 	Name     string
 	Vars     map[string]string
@@ -93,4 +94,46 @@ func HostMapListValues(mymap map[string]*Host) []*Host {
 		i++
 	}
 	return values
+}
+
+// HostsToLower transforms all host names to lowercase
+func (inventory *InventoryData) HostsToLower() {
+	inventory.Hosts = hostMapToLower(inventory.Hosts, false)
+	for _, group := range inventory.Groups {
+		group.Hosts = hostMapToLower(group.Hosts, true)
+	}
+}
+
+func hostMapToLower(hosts map[string]*Host, keysOnly bool) map[string]*Host {
+	newHosts := make(map[string]*Host, len(hosts))
+	for hostname, host := range hosts {
+		hostname = strings.ToLower(hostname)
+		if !keysOnly {
+			host.Name = hostname
+		}
+		newHosts[hostname] = host
+	}
+	return newHosts
+}
+
+// GroupsToLower transforms all group names to lowercase
+func (inventory *InventoryData) GroupsToLower() {
+	inventory.Groups = groupMapToLower(inventory.Groups, false)
+	for _, host := range inventory.Hosts {
+		host.Groups = groupMapToLower(host.Groups, true)
+	}
+}
+
+func groupMapToLower(groups map[string]*Group, keysOnly bool) map[string]*Group {
+	newGroups := make(map[string]*Group, len(groups))
+	for groupname, group := range groups {
+		groupname = strings.ToLower(groupname)
+		if !keysOnly {
+			group.Name = groupname
+			group.Parents = groupMapToLower(group.Parents, true)
+			group.Children = groupMapToLower(group.Children, true)
+		}
+		newGroups[groupname] = group
+	}
+	return newGroups
 }

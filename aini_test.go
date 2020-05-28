@@ -17,9 +17,21 @@ func (inventory *InventoryData) assertGroupExists(t *testing.T, group string) {
 	}
 }
 
+func (inventory *InventoryData) assertGroupNotExists(t *testing.T, group string) {
+	if inventory.Groups[group] != nil {
+		t.Errorf("Group \"%s\" should not exist in %v", group, inventory.Groups)
+	}
+}
+
 func (host *Host) assertGroupExists(t *testing.T, group string) {
 	if host.Groups[group] == nil {
 		t.Errorf("Cannot find group \"%s\" in %v", group, host.Groups)
+	}
+}
+
+func (host *Host) assertGroupNotExists(t *testing.T, group string) {
+	if host.Groups[group] != nil {
+		t.Errorf("Group \"%s\" should not exist in %v", group, host.Groups)
 	}
 }
 
@@ -46,9 +58,21 @@ func (inventory *InventoryData) assertHostExists(t *testing.T, host string) {
 	}
 }
 
+func (inventory *InventoryData) assertHostNotExists(t *testing.T, host string) {
+	if inventory.Hosts[host] != nil {
+		t.Errorf("Host \"%s\" should not exist in %v", host, inventory.Hosts)
+	}
+}
+
 func (group *Group) assertHostExists(t *testing.T, host string) {
 	if group.Hosts[host] == nil {
 		t.Errorf("Cannot find host \"%s\" in %v", host, group.Hosts)
+	}
+}
+
+func (group *Group) assertHostNotExists(t *testing.T, host string) {
+	if group.Hosts[host] != nil {
+		t.Errorf("Host \"%s\" should not exist in %v", host, group.Hosts)
 	}
 }
 
@@ -260,6 +284,103 @@ func TestVariablesPriority(t *testing.T) {
 
 }
 
+func TestHostsToLower(t *testing.T) {
+	v := parseString(t, `
+	CatFish
+	[web:children]
+	TomCat
+
+	[TomCat]
+	TomCat
+	tomcat-1
+	cat
+	`)
+	v.assertHostExists(t, "CatFish")
+	v.Groups["ungrouped"].assertHostExists(t, "CatFish")
+	v.assertHostExists(t, "TomCat")
+	v.HostsToLower()
+	v.assertHostNotExists(t, "CatFish")
+	v.assertHostExists(t, "catfish")
+	assert(t, v.Hosts["catfish"].Name == "catfish", "Host catfish should have matching name")
+	v.assertHostNotExists(t, "TomCat")
+	v.assertHostExists(t, "tomcat")
+	assert(t, v.Hosts["tomcat"].Name == "tomcat", "Host catfish should have matching name")
+	v.Groups["ungrouped"].assertHostNotExists(t, "CatFish")
+	v.Groups["ungrouped"].assertHostExists(t, "catfish")
+	v.Groups["web"].assertHostNotExists(t, "TomCat")
+	v.Groups["web"].assertHostExists(t, "tomcat")
+}
+
+func TestGroupsToLower(t *testing.T) {
+	v := parseString(t, `
+	[Web]
+	CatFish
+
+	[Web:children]
+	TomCat
+
+	[TomCat]
+	TomCat
+	tomcat-1
+	cat
+	`)
+	v.assertGroupExists(t, "Web")
+	v.assertGroupExists(t, "TomCat")
+	v.GroupsToLower()
+	v.assertGroupNotExists(t, "Web")
+	v.assertGroupNotExists(t, "TomCat")
+	v.assertGroupExists(t, "web")
+	v.assertGroupExists(t, "tomcat")
+
+	assert(t, v.Groups["web"].Name == "web", "Group web should have matching name")
+	v.Groups["web"].assertChildGroupExists(t, "tomcat")
+	v.Groups["web"].assertHostExists(t, "TomCat")
+
+	assert(t, v.Groups["tomcat"].Name == "tomcat", "Group tomcat should have matching name")
+	v.Groups["tomcat"].assertHostExists(t, "TomCat")
+	v.Groups["tomcat"].assertHostExists(t, "tomcat-1")
+	v.Groups["tomcat"].assertHostExists(t, "cat")
+}
+
+func TestGroupsAndHostsToLower(t *testing.T) {
+	v := parseString(t, `
+	[Web]
+	CatFish
+
+	[Web:children]
+	TomCat
+
+	[TomCat]
+	TomCat
+	tomcat-1
+	`)
+	v.assertGroupExists(t, "Web")
+	v.assertGroupExists(t, "TomCat")
+
+	v.assertHostExists(t, "CatFish")
+	v.assertHostExists(t, "TomCat")
+	v.assertHostExists(t, "tomcat-1")
+
+	v.GroupsToLower()
+	v.HostsToLower()
+
+	v.assertGroupNotExists(t, "Web")
+	v.assertGroupNotExists(t, "TomCat")
+	v.assertGroupExists(t, "web")
+	v.assertGroupExists(t, "tomcat")
+
+	v.assertHostNotExists(t, "CatFish")
+	v.assertHostNotExists(t, "TomCat")
+	v.assertHostExists(t, "catfish")
+	v.assertHostExists(t, "tomcat")
+	v.assertHostExists(t, "tomcat-1")
+
+	v.Groups["web"].assertHostExists(t, "catfish")
+	v.Groups["web"].assertChildGroupExists(t, "tomcat")
+	v.Groups["tomcat"].assertHostExists(t, "tomcat")
+	v.Groups["tomcat"].assertHostExists(t, "tomcat-1")
+}
+
 func TestVariablesEscaping(t *testing.T) {
 	v := parseString(t, `
 	host ansible_ssh_common_args="-o ProxyCommand='ssh -W %h:%p somehost'" other_var_same_value="-o ProxyCommand='ssh -W %h:%p somehost'" # comment
@@ -269,8 +390,35 @@ func TestVariablesEscaping(t *testing.T) {
 	v.Hosts["host"].assertVar(t, "other_var_same_value", "-o ProxyCommand='ssh -W %h:%p somehost'")
 }
 
+func TestComments(t *testing.T) {
+	v := parseString(t, `
+	catfish        # I'm a comment
+	# Whole-line comment
+	[web:children] # Look, there is a cat in comment!
+	tomcat         # This is a group!
+	 # Whole-line comment with a leading space
+	[tomcat]       # And here is another cat 🐈
+	tomcat         # Host comment
+	tomcat-1 # Small indention comment
+	cat                                           # Big indention comment
+	`)
+	v.assertGroupExists(t, "web")
+	v.assertGroupExists(t, "tomcat")
+	v.Groups["web"].assertChildGroupExists(t, "tomcat")
+
+	v.assertHostExists(t, "tomcat")
+	v.assertHostExists(t, "tomcat-1")
+	v.assertHostExists(t, "cat")
+	v.Groups["tomcat"].assertHostExists(t, "tomcat")
+	v.Groups["tomcat"].assertHostExists(t, "tomcat-1")
+	v.Groups["tomcat"].assertHostExists(t, "cat")
+	v.assertHostExists(t, "catfish")
+	v.Groups["ungrouped"].assertHostExists(t, "catfish")
+
+}
+
 func TestHostMatching(t *testing.T) {
-	inventory := parseString(t, `
+	v := parseString(t, `
 	catfish
 	[web:children] # Look, there is a cat in comment!
 	tomcat         # This is a group!
@@ -280,7 +428,7 @@ func TestHostMatching(t *testing.T) {
 	tomcat-1
 	cat
 	`)
-	hosts := inventory.Match("*cat*")
+	hosts := v.Match("*cat*")
 	assert(t, len(hosts) == 4, fmt.Sprintf("Should be 4, got: %d\n%v", len(hosts), getNames(hosts)))
 
 }

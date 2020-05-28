@@ -78,7 +78,12 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			}
 		}
 		if activeState == childrenState {
-			newGroup := inventory.getOrCreateGroup(line)
+			parsed, err := shlex.Split(line)
+			if err != nil {
+				return err
+			}
+			groupName := parsed[0]
+			newGroup := inventory.getOrCreateGroup(groupName)
 			newGroup.Parents[activeGroup.Name] = activeGroup
 			inventory.Groups[line] = newGroup
 		}

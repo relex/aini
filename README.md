@@ -57,6 +57,12 @@ func ParseFile(f string) (*InventoryData, error)
 func ParseString(input string) (*InventoryData, error)
     ParseString parses Inventory represented as a string
 
+func (inventory *InventoryData) GroupsToLower()
+    GroupsToLower transforms all group names to lowercase
+
+func (inventory *InventoryData) HostsToLower()
+    HostsToLower transforms all host names to lowercase
+
 func (inventory *InventoryData) Match(m string) []*Host
     Match looks for a hosts that match the pattern
 
