@@ -116,6 +116,7 @@ func TestBelongToBasicGroups(t *testing.T) {
 
 	assert(t, len(v.Groups["ungrouped"].Hosts) == 1, "Group ungrouped must contain one host")
 	v.Groups["ungrouped"].assertHostExists(t, "host1")
+	v.Groups["ungrouped"].assertHostNotExists(t, "host2")
 
 	assert(t, v.Hosts["host1"].Port == 2221, "Host1 ports doesn't match")
 	assert(t, v.Hosts["host2"].Port == 22, "Host2 ports doesn't match")
@@ -163,6 +164,7 @@ func TestGroupStructure(t *testing.T) {
 	v.Hosts["host1"].assertGroupExists(t, "web")
 	v.Hosts["host1"].assertGroupExists(t, "nginx")
 
+	assert(t, len(v.Groups["ungrouped"].Hosts) == 0, "Group ungrouped should be empty")
 }
 
 func TestGroupNotExplicitlyDefined(t *testing.T) {
@@ -189,6 +191,7 @@ func TestGroupNotExplicitlyDefined(t *testing.T) {
 	v.Hosts["host1"].assertGroupExists(t, "web")
 	v.Hosts["host1"].assertGroupExists(t, "nginx")
 
+	assert(t, len(v.Groups["ungrouped"].Hosts) == 0, "Group ungrouped should be empty")
 }
 
 func TestHostExpansionFullNumericPattern(t *testing.T) {
