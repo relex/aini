@@ -124,6 +124,8 @@ func TestBelongToBasicGroups(t *testing.T) {
 
 func TestGroupStructure(t *testing.T) {
 	v := parseString(t, `
+	host5
+	
 	[web:children]
 	nginx
 	apache

@@ -72,6 +72,9 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			}
 			for k, v := range hosts {
 				activeGroup.Hosts[k] = v
+				if activeGroup.Name != "ungrouped" {
+					delete(inventory.Groups["ungrouped"].Hosts, k)
+				}
 			}
 			for _, host := range hosts {
 				inventory.Hosts[host.Name] = host
