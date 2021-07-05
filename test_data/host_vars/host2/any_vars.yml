@@ -1,0 +1,7 @@
+---
+# This variable will be overwritten since the file is earlier in lexical order
+host2_int_var: 0
+host2_string_var: string1
+host2_object_var:
+  this:
+    is: object?

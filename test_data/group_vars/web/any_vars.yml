@@ -1,0 +1,7 @@
+---
+# This variable will be overwritten since the file is earlier in lexical order
+web_int_var: 0
+web_string_var: string1
+web_object_var:
+  this:
+    is: object?

@@ -357,7 +357,6 @@ func TestComments(t *testing.T) {
 	assert.Contains(t, v.Groups["tomcat"].Hosts, "cat")
 	assert.Contains(t, v.Hosts, "catfish")
 	assert.Contains(t, v.Groups["ungrouped"].Hosts, "catfish")
-
 }
 
 func TestHostMatching(t *testing.T) {
@@ -373,4 +372,32 @@ func TestHostMatching(t *testing.T) {
 	`)
 	hosts := v.Match("*cat*")
 	assert.Len(t, hosts, 4)
+}
+
+func TestHostMapListValues(t *testing.T) {
+	v := parseString(t, `
+	host1
+	host2
+	host3
+	`)
+
+	hosts := HostMapListValues(v.Hosts)
+	assert.Len(t, hosts, 3)
+	for _, v := range hosts {
+		assert.Contains(t, hosts, v)
+	}
+}
+
+func TestGroupMapListValues(t *testing.T) {
+	v := parseString(t, `
+	[group1]
+	[group2]
+	[group3]
+	`)
+
+	groups := GroupMapListValues(v.Groups)
+	assert.Len(t, groups, 5)
+	for _, v := range groups {
+		assert.Contains(t, groups, v)
+	}
 }

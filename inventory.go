@@ -38,10 +38,10 @@ func (inventory *InventoryData) getOrCreateGroup(groupName string) *Group {
 	}
 	g := &Group{
 		Name:     groupName,
-		Hosts:    make(map[string]*Host, 0),
-		Vars:     make(map[string]string, 0),
-		Children: make(map[string]*Group, 0),
-		Parents:  make(map[string]*Group, 0),
+		Hosts:    make(map[string]*Host),
+		Vars:     make(map[string]string),
+		Children: make(map[string]*Group),
+		Parents:  make(map[string]*Group),
 	}
 	inventory.Groups[groupName] = g
 	return g
@@ -55,8 +55,8 @@ func (inventory *InventoryData) getOrCreateHost(hostName string) *Host {
 	h := &Host{
 		Name:   hostName,
 		Port:   22,
-		Groups: make(map[string]*Group, 0),
-		Vars:   make(map[string]string, 0),
+		Groups: make(map[string]*Group),
+		Vars:   make(map[string]string),
 	}
 	inventory.Hosts[hostName] = h
 	return h

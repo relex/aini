@@ -1,0 +1,6 @@
+---
+host2_int_var: 1
+host2_string_var: string
+host2_object_var:
+  this:
+    is: object

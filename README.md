@@ -10,6 +10,7 @@ https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html
 - [X] Variables
 - [X] Host patterns
 - [X] Nested groups
+- [X] Load variables from `group_vars` and `host_vars`
 
 ## Public API
 ```godoc
@@ -25,7 +26,8 @@ type Group struct {
         Children map[string]*Group
         Parents  map[string]*Group
 }
-    Group represents ansible group
+    Group represents ansible group Note: Hosts field lists only direct members
+    of the group, members of children groups are not included
 
 func GroupMapListValues(mymap map[string]*Group) []*Group
     GroupMapListValues transforms map of Groups into Group list
@@ -56,6 +58,15 @@ func ParseFile(f string) (*InventoryData, error)
 
 func ParseString(input string) (*InventoryData, error)
     ParseString parses Inventory represented as a string
+
+func (inventory *InventoryData) AddVars(path string) error
+    AddVars take a path that contains group_vars and host_vars directories and
+    adds these variables to the InventoryData
+
+func (inventory *InventoryData) AddVarsLowerCased(path string) error
+    AddVarsLowerCased does the same as AddVars, but converts hostnames and
+    groups name to lowercase Use this function if you've executed
+    `inventory.HostsToLower` or `inventory.GroupsToLower`
 
 func (inventory *InventoryData) GroupsToLower()
     GroupsToLower transforms all group names to lowercase
