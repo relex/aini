@@ -70,14 +70,12 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			if err != nil {
 				return err
 			}
-			for k, v := range hosts {
-				activeGroup.Hosts[k] = v
-				if activeGroup.Name != "ungrouped" {
-					delete(inventory.Groups["ungrouped"].Hosts, k)
-				}
-			}
 			for _, host := range hosts {
+				host.directGroups[activeGroup.Name] = activeGroup
 				inventory.Hosts[host.Name] = host
+				if activeGroup.Name != "ungrouped" {
+					delete(host.directGroups, "ungrouped")
+				}
 			}
 		}
 		if activeState == childrenState {
@@ -87,7 +85,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			}
 			groupName := parsed[0]
 			newGroup := inventory.getOrCreateGroup(groupName)
-			newGroup.Parents[activeGroup.Name] = activeGroup
+			newGroup.directParents[activeGroup.Name] = activeGroup
 			inventory.Groups[line] = newGroup
 		}
 		if activeState == varsState {
@@ -95,7 +93,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			if err != nil {
 				return err
 			}
-			activeGroup.Vars[k] = v
+			activeGroup.inventoryVars[k] = v
 		}
 	}
 	inventory.Groups[activeGroup.Name] = activeGroup
@@ -130,8 +128,8 @@ func (inventory *InventoryData) getHosts(line string, group *Group) (map[string]
 
 		host := inventory.getOrCreateHost(hostname)
 		host.Port = port
-		host.Groups[group.Name] = group
-		addValuesFromMap(host.Vars, vars)
+		host.directGroups[group.Name] = group
+		addValues(host.inventoryVars, vars)
 
 		result[host.Name] = host
 	}

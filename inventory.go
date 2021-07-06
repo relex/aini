@@ -3,32 +3,27 @@ package aini
 // Inventory-related helper methods
 
 // Reconcile ensures inventory basic rules, run after updates
+// After initial inventory file processing, only direct relationships are set
+// This method sets Children and Parents
 func (inventory *InventoryData) Reconcile() {
 	allGroup := inventory.getOrCreateGroup("all")
 	allGroup.Hosts = inventory.Hosts
 	allGroup.Children = inventory.Groups
 
 	for _, host := range inventory.Hosts {
-		for _, group := range host.Groups {
-			host.setVarsIfNotExist(group.Vars)
+		for _, group := range host.directGroups {
+			group.Hosts[host.Name] = host
+			host.Groups[group.Name] = group
+			group.directParents[allGroup.Name] = allGroup
 			for _, ancestor := range group.getAncestors() {
-				ancestor.Hosts[host.Name] = host
+				group.Parents[ancestor.Name] = ancestor
 				ancestor.Children[group.Name] = group
+				ancestor.Hosts[host.Name] = host
 				host.Groups[ancestor.Name] = ancestor
-				for k, v := range ancestor.Vars {
-					if _, ok := host.Vars[k]; !ok {
-						host.Vars[k] = v
-					}
-					if _, ok := group.Vars[k]; !ok {
-						group.Vars[k] = v
-					}
-				}
 			}
 		}
-		host.setVarsIfNotExist(allGroup.Vars)
-		host.Groups["all"] = allGroup
 	}
-	inventory.Groups["all"] = allGroup
+	inventory.reconcileVars()
 }
 
 // getOrCreateGroup return group from inventory if exists or creates empty Group with given name
@@ -42,6 +37,10 @@ func (inventory *InventoryData) getOrCreateGroup(groupName string) *Group {
 		Vars:     make(map[string]string),
 		Children: make(map[string]*Group),
 		Parents:  make(map[string]*Group),
+
+		directParents: make(map[string]*Group),
+		inventoryVars: make(map[string]string),
+		fileVars:      make(map[string]string),
 	}
 	inventory.Groups[groupName] = g
 	return g
@@ -57,6 +56,10 @@ func (inventory *InventoryData) getOrCreateHost(hostName string) *Host {
 		Port:   22,
 		Groups: make(map[string]*Group),
 		Vars:   make(map[string]string),
+
+		directGroups:  make(map[string]*Group),
+		inventoryVars: make(map[string]string),
+		fileVars:      make(map[string]string),
 	}
 	inventory.Hosts[hostName] = h
 	return h
@@ -68,7 +71,7 @@ func (group *Group) getAncestors() []*Group {
 
 	for queue := []*Group{group}; ; {
 		group := queue[0]
-		parentList := GroupMapListValues(group.Parents)
+		parentList := GroupMapListValues(group.directParents)
 		result = append(result, parentList...)
 		copy(queue, queue[1:])
 		queue = queue[:len(queue)-1]
@@ -80,19 +83,16 @@ func (group *Group) getAncestors() []*Group {
 	}
 }
 
-// setVarsIfNotExist sets Var for host if it doesn't have it already
-func (host *Host) setVarsIfNotExist(vars map[string]string) {
-	for k, v := range vars {
-		if _, ok := host.Vars[k]; !ok {
-			host.Vars[k] = v
-		}
+// addValues fills `to` map with values from `from` map
+func addValues(to map[string]string, from map[string]string) {
+	for k, v := range from {
+		to[k] = v
 	}
 }
 
-func addValuesFromMap(m1 map[string]string, m2 map[string]string) {
-	for k, v := range m2 {
-		if m1[k] == "" {
-			m1[k] = v
-		}
-	}
+// copyStringMap creates a non-deep copy of the map
+func copyStringMap(from map[string]string) map[string]string {
+	result := make(map[string]string, len(from))
+	addValues(result, from)
+	return result
 }

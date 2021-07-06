@@ -32,38 +32,39 @@ func (inventory *InventoryData) doAddVars(path string, lowercased bool) error {
 	}
 	walk(path, "group_vars", inventory.getGroupsMap(), lowercased)
 	walk(path, "host_vars", inventory.getHostsMap(), lowercased)
+	inventory.reconcileVars()
 	return nil
 }
 
-type varsGetter interface {
-	getVars() map[string]string
+type fileVarsGetter interface {
+	getFileVars() map[string]string
 }
 
-func (host *Host) getVars() map[string]string {
-	return host.Vars
+func (host *Host) getFileVars() map[string]string {
+	return host.fileVars
 }
 
-func (group *Group) getVars() map[string]string {
-	return group.Vars
+func (group *Group) getFileVars() map[string]string {
+	return group.fileVars
 }
 
-func (inventory InventoryData) getHostsMap() map[string]varsGetter {
-	result := make(map[string]varsGetter, len(inventory.Hosts))
+func (inventory InventoryData) getHostsMap() map[string]fileVarsGetter {
+	result := make(map[string]fileVarsGetter, len(inventory.Hosts))
 	for k, v := range inventory.Hosts {
 		result[k] = v
 	}
 	return result
 }
 
-func (inventory InventoryData) getGroupsMap() map[string]varsGetter {
-	result := make(map[string]varsGetter, len(inventory.Groups))
+func (inventory InventoryData) getGroupsMap() map[string]fileVarsGetter {
+	result := make(map[string]fileVarsGetter, len(inventory.Groups))
 	for k, v := range inventory.Groups {
 		result[k] = v
 	}
 	return result
 }
 
-func walk(root string, subdir string, m map[string]varsGetter, lowercased bool) error {
+func walk(root string, subdir string, m map[string]fileVarsGetter, lowercased bool) error {
 	path := filepath.Join(root, subdir)
 	_, err := os.Stat(path)
 	// If the dir doesn't exist we can just skip it
@@ -74,7 +75,7 @@ func walk(root string, subdir string, m map[string]varsGetter, lowercased bool) 
 	return filepath.WalkDir(path, f)
 }
 
-func getWalkerFn(root string, m map[string]varsGetter, lowercased bool) fs.WalkDirFunc {
+func getWalkerFn(root string, m map[string]fileVarsGetter, lowercased bool) fs.WalkDirFunc {
 	var currentVars map[string]string
 	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -88,7 +89,7 @@ func getWalkerFn(root string, m map[string]varsGetter, lowercased bool) fs.WalkD
 				itemName = strings.ToLower(itemName)
 			}
 			if currentItem, ok := m[itemName]; ok {
-				currentVars = currentItem.getVars()
+				currentVars = currentItem.getFileVars()
 			} else {
 				return nil
 			}
@@ -135,4 +136,60 @@ func addVarsFromFile(currentVars map[string]string, path string) error {
 		}
 	}
 	return nil
+}
+
+func (inventory *InventoryData) reconcileVars() {
+	/*
+		Priority of variables is defined here: https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#understanding-variable-precedence
+		Distilled list looks like this:
+			1. inventory file group vars
+			2. group_vars/*
+			3. inventory file host vars
+			4. inventory host_vars/*
+	*/
+	for _, group := range inventory.Groups {
+		group.allInventoryVars = nil
+		group.allFileVars = nil
+	}
+	for _, group := range inventory.Groups {
+		group.Vars = make(map[string]string)
+		group.populateInventoryVars()
+		group.populateFileVars()
+		// At this point we already "populated" all parent's inventory and file vars
+		// So it's fine to build Vars right away, without needing the second pass
+		group.Vars = copyStringMap(group.allInventoryVars)
+		addValues(group.Vars, group.allFileVars)
+	}
+	for _, host := range inventory.Hosts {
+		host.Vars = make(map[string]string)
+		for _, group := range GroupMapListValues(host.directGroups) {
+			addValues(host.Vars, group.Vars)
+		}
+		addValues(host.Vars, host.inventoryVars)
+		addValues(host.Vars, host.fileVars)
+	}
+}
+
+func (group *Group) populateInventoryVars() {
+	if group.allInventoryVars != nil {
+		return
+	}
+	group.allInventoryVars = make(map[string]string)
+	for _, parent := range GroupMapListValues(group.directParents) {
+		parent.populateFileVars()
+		addValues(group.allInventoryVars, parent.allInventoryVars)
+	}
+	addValues(group.allInventoryVars, group.inventoryVars)
+}
+
+func (group *Group) populateFileVars() {
+	if group.allFileVars != nil {
+		return
+	}
+	group.allFileVars = make(map[string]string)
+	for _, parent := range GroupMapListValues(group.directParents) {
+		parent.populateFileVars()
+		addValues(group.allFileVars, parent.allFileVars)
+	}
+	addValues(group.allFileVars, group.fileVars)
 }

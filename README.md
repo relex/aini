@@ -25,23 +25,26 @@ type Group struct {
         Hosts    map[string]*Host
         Children map[string]*Group
         Parents  map[string]*Group
+
+        // Has unexported fields.
 }
-    Group represents ansible group Note: Hosts field lists only direct members
-    of the group, members of children groups are not included
+    Group represents ansible group
 
 func GroupMapListValues(mymap map[string]*Group) []*Group
-    GroupMapListValues transforms map of Groups into Group list
+    GroupMapListValues transforms map of Groups into Group list in lexical order
 
 type Host struct {
         Name   string
         Port   int
         Vars   map[string]string
         Groups map[string]*Group
+
+        // Has unexported fields.
 }
     Host represents ansible host
 
 func HostMapListValues(mymap map[string]*Host) []*Host
-    HostMapListValues transforms map of Hosts into Host list
+    HostMapListValues transforms map of Hosts into Host list in lexical order
 
 type InventoryData struct {
         Groups map[string]*Group
@@ -78,7 +81,9 @@ func (inventory *InventoryData) Match(m string) []*Host
     Match looks for a hosts that match the pattern
 
 func (inventory *InventoryData) Reconcile()
-    Reconcile ensures inventory basic rules, run after updates
+    Reconcile ensures inventory basic rules, run after updates After initial
+    inventory file processing, only direct relationships are set This method
+    sets Children and Parents
 
 ```
 

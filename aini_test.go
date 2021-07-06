@@ -79,7 +79,7 @@ func TestGroupStructure(t *testing.T) {
 	assert.Contains(t, v.Groups, "apache")
 	assert.Contains(t, v.Groups, "nginx")
 
-	assert.Len(t, v.Groups, 5, "Five groups must present: web, apache, nginx, all, ungrouped")
+	assert.Len(t, v.Groups, 5, "Five groups must be present: web, apache, nginx, all, ungrouped")
 
 	assert.Contains(t, v.Groups["web"].Children, "nginx")
 	assert.Contains(t, v.Groups["web"].Children, "apache")
