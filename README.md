@@ -33,6 +33,8 @@ type Group struct {
 func GroupMapListValues(mymap map[string]*Group) []*Group
     GroupMapListValues transforms map of Groups into Group list in lexical order
 
+func (group Group) String() string
+
 type Host struct {
         Name   string
         Port   int
@@ -45,6 +47,8 @@ type Host struct {
 
 func HostMapListValues(mymap map[string]*Host) []*Host
     HostMapListValues transforms map of Hosts into Host list in lexical order
+
+func (host Host) String() string
 
 type InventoryData struct {
         Groups map[string]*Group
@@ -82,8 +86,13 @@ func (inventory *InventoryData) Match(m string) []*Host
 
 func (inventory *InventoryData) Reconcile()
     Reconcile ensures inventory basic rules, run after updates After initial
-    inventory file processing, only direct relationships are set This method
-    sets Children and Parents
+    inventory file processing, only direct relationships are set
+
+    This method:
+
+        * (re)sets Children and Parents for hosts and groups
+        * ensures that mandatory groups exist
+        * calculates variables for hosts and groups
 
 ```
 

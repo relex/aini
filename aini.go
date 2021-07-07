@@ -147,6 +147,14 @@ func (inventory *InventoryData) GroupsToLower() {
 	}
 }
 
+func (group Group) String() string {
+	return group.Name
+}
+
+func (host Host) String() string {
+	return host.Name
+}
+
 func groupMapToLower(groups map[string]*Group, keysOnly bool) map[string]*Group {
 	newGroups := make(map[string]*Group, len(groups))
 	for groupname, group := range groups {

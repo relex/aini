@@ -19,7 +19,7 @@ func (inventory *InventoryData) AddVars(path string) error {
 	return inventory.doAddVars(path, false)
 }
 
-// AddVarsLowerCased does the same as AddVars, but converts hostnames and groups name to lowercase
+// AddVarsLowerCased does the same as AddVars, but converts hostnames and groups name to lowercase.
 // Use this function if you've executed `inventory.HostsToLower` or `inventory.GroupsToLower`
 func (inventory *InventoryData) AddVarsLowerCased(path string) error {
 	return inventory.doAddVars(path, true)
@@ -176,7 +176,7 @@ func (group *Group) populateInventoryVars() {
 	}
 	group.allInventoryVars = make(map[string]string)
 	for _, parent := range GroupMapListValues(group.directParents) {
-		parent.populateFileVars()
+		parent.populateInventoryVars()
 		addValues(group.allInventoryVars, parent.allInventoryVars)
 	}
 	addValues(group.allInventoryVars, group.inventoryVars)

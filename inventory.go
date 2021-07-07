@@ -2,28 +2,87 @@ package aini
 
 // Inventory-related helper methods
 
-// Reconcile ensures inventory basic rules, run after updates
-// After initial inventory file processing, only direct relationships are set
-// This method sets Children and Parents
+// Reconcile ensures inventory basic rules, run after updates.
+// After initial inventory file processing, only direct relationships are set.
+//
+// This method:
+//   * (re)sets Children and Parents for hosts and groups
+//   * ensures that mandatory groups exist
+//   * calculates variables for hosts and groups
 func (inventory *InventoryData) Reconcile() {
-	allGroup := inventory.getOrCreateGroup("all")
-	allGroup.Hosts = inventory.Hosts
-	allGroup.Children = inventory.Groups
-
+	// Clear all computed data
 	for _, host := range inventory.Hosts {
+		host.clearData()
+	}
+	// a group can be empty (with no hosts in it), so the previous method will not clean it
+	// on the other hand, a group could have been attached to a host by a user, but not added to the inventory.Groups map
+	// so it's safer just to clean everything
+	for _, group := range inventory.Groups {
+		group.clearData(make(map[string]struct{}, len(inventory.Groups)))
+	}
+
+	allGroup := inventory.getOrCreateGroup("all")
+	ungroupedGroup := inventory.getOrCreateGroup("ungrouped")
+	ungroupedGroup.directParents[allGroup.Name] = allGroup
+
+	// First, ensure that inventory.Groups contains all the groups
+	for _, host := range inventory.Hosts {
+		for _, group := range host.directGroups {
+			inventory.Groups[group.Name] = group
+			for _, ancestor := range group.getAncestors() {
+				inventory.Groups[ancestor.Name] = ancestor
+			}
+		}
+	}
+
+	// Calculate intergroup relationships
+	for _, group := range inventory.Groups {
+		group.directParents[allGroup.Name] = allGroup
+		for _, ancestor := range group.getAncestors() {
+			group.Parents[ancestor.Name] = ancestor
+			ancestor.Children[group.Name] = group
+		}
+	}
+
+	// Now set hosts for groups and groups for hosts
+	for _, host := range inventory.Hosts {
+		host.Groups[allGroup.Name] = allGroup
 		for _, group := range host.directGroups {
 			group.Hosts[host.Name] = host
 			host.Groups[group.Name] = group
-			group.directParents[allGroup.Name] = allGroup
-			for _, ancestor := range group.getAncestors() {
-				group.Parents[ancestor.Name] = ancestor
-				ancestor.Children[group.Name] = group
-				ancestor.Hosts[host.Name] = host
-				host.Groups[ancestor.Name] = ancestor
+			for _, parent := range group.Parents {
+				group.Parents[parent.Name] = parent
+				parent.Children[group.Name] = group
+				parent.Hosts[host.Name] = host
+				host.Groups[parent.Name] = parent
 			}
 		}
 	}
 	inventory.reconcileVars()
+}
+
+func (host *Host) clearData() {
+	host.Groups = make(map[string]*Group)
+	host.Vars = make(map[string]string)
+	for _, group := range host.directGroups {
+		group.clearData(make(map[string]struct{}, len(host.Groups)))
+	}
+}
+
+func (group *Group) clearData(visited map[string]struct{}) {
+	if _, ok := visited[group.Name]; ok {
+		return
+	}
+	group.Hosts = make(map[string]*Host)
+	group.Parents = make(map[string]*Group)
+	group.Children = make(map[string]*Group)
+	group.Vars = make(map[string]string)
+	group.allInventoryVars = nil
+	group.allFileVars = nil
+	visited[group.Name] = struct{}{}
+	for _, parent := range group.directParents {
+		parent.clearData(visited)
+	}
 }
 
 // getOrCreateGroup return group from inventory if exists or creates empty Group with given name
@@ -68,13 +127,24 @@ func (inventory *InventoryData) getOrCreateHost(hostName string) *Host {
 // getAncestors returns all Ancestors of a given group in level order
 func (group *Group) getAncestors() []*Group {
 	result := make([]*Group, 0)
+	if len(group.directParents) == 0 {
+		return result
+	}
+	visited := map[string]struct{}{group.Name: {}}
 
-	for queue := []*Group{group}; ; {
+	for queue := GroupMapListValues(group.directParents); ; {
 		group := queue[0]
-		parentList := GroupMapListValues(group.directParents)
-		result = append(result, parentList...)
 		copy(queue, queue[1:])
 		queue = queue[:len(queue)-1]
+		if _, ok := visited[group.Name]; ok {
+			if len(queue) == 0 {
+				return result
+			}
+			continue
+		}
+		visited[group.Name] = struct{}{}
+		parentList := GroupMapListValues(group.directParents)
+		result = append(result, group)
 		queue = append(queue, parentList...)
 
 		if len(queue) == 0 {

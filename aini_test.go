@@ -78,6 +78,8 @@ func TestGroupStructure(t *testing.T) {
 	assert.Contains(t, v.Groups, "web")
 	assert.Contains(t, v.Groups, "apache")
 	assert.Contains(t, v.Groups, "nginx")
+	assert.Contains(t, v.Groups, "all")
+	assert.Contains(t, v.Groups, "ungrouped")
 
 	assert.Len(t, v.Groups, 5, "Five groups must be present: web, apache, nginx, all, ungrouped")
 
@@ -111,6 +113,8 @@ func TestGroupNotExplicitlyDefined(t *testing.T) {
 
 	assert.Contains(t, v.Groups, "web")
 	assert.Contains(t, v.Groups, "nginx")
+	assert.Contains(t, v.Groups, "all")
+	assert.Contains(t, v.Groups, "ungrouped")
 
 	assert.Len(t, v.Groups, 4, "Four groups must present: web, nginx, all, ungrouped")
 
@@ -126,17 +130,60 @@ func TestGroupNotExplicitlyDefined(t *testing.T) {
 	assert.Empty(t, v.Groups["ungrouped"].Hosts, "Group ungrouped should be empty")
 }
 
+func TestAllGroup(t *testing.T) {
+	v := parseString(t, `
+	host7
+	host5
+
+	[web:children]
+	nginx
+	apache
+
+	[web]
+	host1
+	host2
+
+	[nginx]
+	host1
+	host3
+	host4
+
+	[apache]
+	host5
+	host6
+	`)
+
+	allGroup := v.Groups["all"]
+	assert.NotNil(t, allGroup)
+	assert.Empty(t, allGroup.Parents)
+	assert.NotContains(t, allGroup.Children, "all")
+	assert.Len(t, allGroup.Children, 4)
+	assert.Len(t, allGroup.Hosts, 7)
+	for _, group := range v.Groups {
+		if group.Name == "all" {
+			continue
+		}
+		assert.Contains(t, allGroup.Children, group.Name)
+		assert.Contains(t, group.Parents, allGroup.Name)
+	}
+	for _, host := range v.Hosts {
+		assert.Contains(t, allGroup.Hosts, host.Name)
+		assert.Contains(t, host.Groups, allGroup.Name)
+
+	}
+}
+
 func TestHostExpansionFullNumericPattern(t *testing.T) {
 	v := parseString(t, `
 	host-[001:015:3]-web:23
 	`)
 
-	assert.Len(t, v.Hosts, 5)
 	assert.Contains(t, v.Hosts, "host-001-web")
 	assert.Contains(t, v.Hosts, "host-004-web")
 	assert.Contains(t, v.Hosts, "host-007-web")
 	assert.Contains(t, v.Hosts, "host-010-web")
 	assert.Contains(t, v.Hosts, "host-013-web")
+	assert.Len(t, v.Hosts, 5)
 
 	for _, host := range v.Hosts {
 		assert.Equalf(t, 23, host.Port, "%s port is set", host.Name)
@@ -148,46 +195,46 @@ func TestHostExpansionFullAlphabeticPattern(t *testing.T) {
 	host-[a:o:3]-web
 	`)
 
-	assert.Len(t, v.Hosts, 5)
 	assert.Contains(t, v.Hosts, "host-a-web")
 	assert.Contains(t, v.Hosts, "host-d-web")
 	assert.Contains(t, v.Hosts, "host-g-web")
 	assert.Contains(t, v.Hosts, "host-j-web")
 	assert.Contains(t, v.Hosts, "host-m-web")
+	assert.Len(t, v.Hosts, 5)
 }
 
 func TestHostExpansionShortNumericPattern(t *testing.T) {
 	v := parseString(t, `
 	host-[:05]-web
 	`)
-	assert.Len(t, v.Hosts, 6)
 	assert.Contains(t, v.Hosts, "host-00-web")
 	assert.Contains(t, v.Hosts, "host-01-web")
 	assert.Contains(t, v.Hosts, "host-02-web")
 	assert.Contains(t, v.Hosts, "host-03-web")
 	assert.Contains(t, v.Hosts, "host-04-web")
 	assert.Contains(t, v.Hosts, "host-05-web")
+	assert.Len(t, v.Hosts, 6)
 }
 
 func TestHostExpansionShortAlphabeticPattern(t *testing.T) {
 	v := parseString(t, `
 	host-[a:c]-web
 	`)
-	assert.Len(t, v.Hosts, 3)
 	assert.Contains(t, v.Hosts, "host-a-web")
 	assert.Contains(t, v.Hosts, "host-b-web")
 	assert.Contains(t, v.Hosts, "host-c-web")
+	assert.Len(t, v.Hosts, 3)
 }
 
 func TestHostExpansionMultiplePatterns(t *testing.T) {
 	v := parseString(t, `
 	host-[1:2]-[a:b]-web
 	`)
-	assert.Len(t, v.Hosts, 4)
 	assert.Contains(t, v.Hosts, "host-1-a-web")
 	assert.Contains(t, v.Hosts, "host-1-b-web")
 	assert.Contains(t, v.Hosts, "host-2-a-web")
 	assert.Contains(t, v.Hosts, "host-2-b-web")
+	assert.Len(t, v.Hosts, 4)
 }
 
 func TestVariablesPriority(t *testing.T) {
@@ -322,6 +369,27 @@ func TestGroupsAndHostsToLower(t *testing.T) {
 	assert.Contains(t, v.Groups["web"].Children, "tomcat")
 	assert.Contains(t, v.Groups["tomcat"].Hosts, "tomcat")
 	assert.Contains(t, v.Groups["tomcat"].Hosts, "tomcat-1")
+}
+
+func TestGroupLoops(t *testing.T) {
+	v := parseString(t, `
+	[group1]
+	host1
+
+	[group1:children]
+	group2
+
+	[group2:children]
+	group1
+	`)
+
+	assert.Contains(t, v.Groups, "group1")
+	assert.Contains(t, v.Groups, "group2")
+	assert.Contains(t, v.Groups["group1"].Parents, "all")
+	assert.Contains(t, v.Groups["group1"].Parents, "group2")
+	assert.NotContains(t, v.Groups["group1"].Parents, "group1")
+	assert.Len(t, v.Groups["group1"].Parents, 2)
+	assert.Contains(t, v.Groups["group2"].Parents, "group1")
 }
 
 func TestVariablesEscaping(t *testing.T) {
