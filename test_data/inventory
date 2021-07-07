@@ -1,0 +1,25 @@
+host5
+
+[web:children]
+nginx
+apache
+
+[web:vars]
+web_string_var=should be overwritten
+web_inventory_string_var=present
+
+[web]
+host1
+host2
+
+[nginx]
+host1 host1_string_var="should be overwritten" host1_inventory_string_var="present"
+host3
+host4
+
+[apache]
+host5
+host6
+
+[TomCat]
+Host7

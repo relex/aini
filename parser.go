@@ -57,12 +57,12 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			activeGroup = inventory.getOrCreateGroup(matches[0][1])
 			var ok bool
 			if activeState, ok = getState(matches[0][2]); !ok {
-				return fmt.Errorf("Section [%s] has unknown type: %s", line, matches[0][2])
+				return fmt.Errorf("section [%s] has unknown type: %s", line, matches[0][2])
 			}
 
 			continue
 		} else if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			return fmt.Errorf("Invalid section entry: '%s'. Please make sure that there are no spaces in the section entry, and that there are no other invalid characters", line)
+			return fmt.Errorf("invalid section entry: '%s'. Make sure that there are no spaces or other characters in the section entry", line)
 		}
 
 		if activeState == hostsState {
@@ -70,14 +70,12 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			if err != nil {
 				return err
 			}
-			for k, v := range hosts {
-				activeGroup.Hosts[k] = v
-				if activeGroup.Name != "ungrouped" {
-					delete(inventory.Groups["ungrouped"].Hosts, k)
-				}
-			}
 			for _, host := range hosts {
+				host.directGroups[activeGroup.Name] = activeGroup
 				inventory.Hosts[host.Name] = host
+				if activeGroup.Name != "ungrouped" {
+					delete(host.directGroups, "ungrouped")
+				}
 			}
 		}
 		if activeState == childrenState {
@@ -87,7 +85,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			}
 			groupName := parsed[0]
 			newGroup := inventory.getOrCreateGroup(groupName)
-			newGroup.Parents[activeGroup.Name] = activeGroup
+			newGroup.directParents[activeGroup.Name] = activeGroup
 			inventory.Groups[line] = newGroup
 		}
 		if activeState == varsState {
@@ -95,7 +93,7 @@ func (inventory *InventoryData) parse(reader *bufio.Reader) error {
 			if err != nil {
 				return err
 			}
-			activeGroup.Vars[k] = v
+			activeGroup.inventoryVars[k] = v
 		}
 	}
 	inventory.Groups[activeGroup.Name] = activeGroup
@@ -130,8 +128,8 @@ func (inventory *InventoryData) getHosts(line string, group *Group) (map[string]
 
 		host := inventory.getOrCreateHost(hostname)
 		host.Port = port
-		host.Groups[group.Name] = group
-		addValuesFromMap(host.Vars, vars)
+		host.directGroups[group.Name] = group
+		addValues(host.inventoryVars, vars)
 
 		result[host.Name] = host
 	}
@@ -142,7 +140,7 @@ func (inventory *InventoryData) getHosts(line string, group *Group) (map[string]
 func splitKV(kv string) (string, string, error) {
 	keyval := strings.SplitN(kv, "=", 2)
 	if len(keyval) == 1 {
-		return "", "", fmt.Errorf("Bad key=value pair supplied: %s", kv)
+		return "", "", fmt.Errorf("bad key=value pair supplied: %s", kv)
 	}
 	return strings.TrimSpace(keyval[0]), strings.TrimSpace(keyval[1]), nil
 }
@@ -174,13 +172,13 @@ func expandHostPattern(hostpattern string) ([]string, error) {
 		return []string{hostpattern}, nil
 	}
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("Wrong host pattern: %s", hostpattern)
+		return nil, fmt.Errorf("wrong host pattern: %s", hostpattern)
 	}
 
 	head, nrange, tail := parts[0], parts[1], parts[2]
 	bounds := strings.Split(nrange, ":")
 	if len(bounds) < 2 || len(bounds) > 3 {
-		return nil, fmt.Errorf("Wrong host pattern: %s", hostpattern)
+		return nil, fmt.Errorf("wrong host pattern: %s", hostpattern)
 	}
 
 	var begin, end []rune
@@ -195,7 +193,7 @@ func expandHostPattern(hostpattern string) ([]string, error) {
 			format := fmt.Sprintf("%%0%dd", len(end))
 			begin = []rune(fmt.Sprintf(format, 0))
 		} else {
-			return nil, fmt.Errorf("Skipping range start in not allowed with alphabetical range: %s", hostpattern)
+			return nil, fmt.Errorf("skipping range start in not allowed with alphabetical range: %s", hostpattern)
 		}
 	} else {
 		begin = []rune(bounds[0])
@@ -220,7 +218,7 @@ func expandHostPattern(hostpattern string) ([]string, error) {
 	}
 
 	if len(chars) == 0 {
-		return nil, fmt.Errorf("Bad range specified: %s", nrange)
+		return nil, fmt.Errorf("bad range specified: %s", nrange)
 	}
 
 	var hosts []string

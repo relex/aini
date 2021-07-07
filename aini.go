@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -17,13 +18,22 @@ type InventoryData struct {
 }
 
 // Group represents ansible group
-// Note: Hosts field lists only direct members of the group, members of children groups are not included
 type Group struct {
 	Name     string
 	Vars     map[string]string
 	Hosts    map[string]*Host
 	Children map[string]*Group
 	Parents  map[string]*Group
+
+	directParents map[string]*Group
+	// Vars set in inventory
+	inventoryVars map[string]string
+	// Vars set in group_vars
+	fileVars map[string]string
+	// Projection of all parent inventory variables
+	allInventoryVars map[string]string
+	// Projection of all parent group_vars variables
+	allFileVars map[string]string
 }
 
 // Host represents ansible host
@@ -32,6 +42,12 @@ type Host struct {
 	Port   int
 	Vars   map[string]string
 	Groups map[string]*Group
+
+	directGroups map[string]*Group
+	// Vars set in inventory
+	inventoryVars map[string]string
+	// Vars set in host_vars
+	fileVars map[string]string
 }
 
 // ParseFile parses Inventory represented as a file
@@ -72,7 +88,7 @@ func (inventory *InventoryData) Match(m string) []*Host {
 	return matchedHosts
 }
 
-// GroupMapListValues transforms map of Groups into Group list
+// GroupMapListValues transforms map of Groups into Group list in lexical order
 func GroupMapListValues(mymap map[string]*Group) []*Group {
 	values := make([]*Group, len(mymap))
 
@@ -81,10 +97,13 @@ func GroupMapListValues(mymap map[string]*Group) []*Group {
 		values[i] = v
 		i++
 	}
+	sort.Slice(values, func(i, j int) bool {
+		return values[i].Name < values[j].Name
+	})
 	return values
 }
 
-// HostMapListValues transforms map of Hosts into Host list
+// HostMapListValues transforms map of Hosts into Host list in lexical order
 func HostMapListValues(mymap map[string]*Host) []*Host {
 	values := make([]*Host, len(mymap))
 
@@ -93,6 +112,9 @@ func HostMapListValues(mymap map[string]*Host) []*Host {
 		values[i] = v
 		i++
 	}
+	sort.Slice(values, func(i, j int) bool {
+		return values[i].Name < values[j].Name
+	})
 	return values
 }
 
@@ -120,8 +142,17 @@ func hostMapToLower(hosts map[string]*Host, keysOnly bool) map[string]*Host {
 func (inventory *InventoryData) GroupsToLower() {
 	inventory.Groups = groupMapToLower(inventory.Groups, false)
 	for _, host := range inventory.Hosts {
+		host.directGroups = groupMapToLower(host.directGroups, true)
 		host.Groups = groupMapToLower(host.Groups, true)
 	}
+}
+
+func (group Group) String() string {
+	return group.Name
+}
+
+func (host Host) String() string {
+	return host.Name
 }
 
 func groupMapToLower(groups map[string]*Group, keysOnly bool) map[string]*Group {
@@ -130,6 +161,7 @@ func groupMapToLower(groups map[string]*Group, keysOnly bool) map[string]*Group 
 		groupname = strings.ToLower(groupname)
 		if !keysOnly {
 			group.Name = groupname
+			group.directParents = groupMapToLower(group.directParents, true)
 			group.Parents = groupMapToLower(group.Parents, true)
 			group.Children = groupMapToLower(group.Children, true)
 		}
