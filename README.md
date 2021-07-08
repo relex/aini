@@ -17,6 +17,18 @@ https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html
 package aini // import "github.com/relex/aini"
 
 
+FUNCTIONS
+
+func MatchGroups(groups map[string]*Group, pattern string) (map[string]*Group, error)
+    MatchGroups looks for groups that match the pattern
+
+func MatchHosts(hosts map[string]*Host, pattern string) (map[string]*Host, error)
+    MatchHosts looks for hosts that match the pattern
+
+func MatchVars(vars map[string]string, pattern string) (map[string]string, error)
+    MatchVars looks for vars that match the pattern
+
+
 TYPES
 
 type Group struct {
@@ -33,6 +45,12 @@ type Group struct {
 func GroupMapListValues(mymap map[string]*Group) []*Group
     GroupMapListValues transforms map of Groups into Group list in lexical order
 
+func (group *Group) MatchHosts(pattern string) (map[string]*Host, error)
+    MatchHosts looks for hosts that match the pattern
+
+func (group *Group) MatchVars(pattern string) (map[string]string, error)
+    MatchVars looks for vars that match the pattern
+
 func (group Group) String() string
 
 type Host struct {
@@ -47,6 +65,12 @@ type Host struct {
 
 func HostMapListValues(mymap map[string]*Host) []*Host
     HostMapListValues transforms map of Hosts into Host list in lexical order
+
+func (host *Host) MatchGroups(pattern string) (map[string]*Group, error)
+    MatchGroups looks for groups that match the pattern
+
+func (host *Host) MatchVars(pattern string) (map[string]string, error)
+    MatchVars looks for vars that match the pattern
 
 func (host Host) String() string
 
@@ -72,7 +96,7 @@ func (inventory *InventoryData) AddVars(path string) error
 
 func (inventory *InventoryData) AddVarsLowerCased(path string) error
     AddVarsLowerCased does the same as AddVars, but converts hostnames and
-    groups name to lowercase Use this function if you've executed
+    groups name to lowercase. Use this function if you've executed
     `inventory.HostsToLower` or `inventory.GroupsToLower`
 
 func (inventory *InventoryData) GroupsToLower()
@@ -81,12 +105,19 @@ func (inventory *InventoryData) GroupsToLower()
 func (inventory *InventoryData) HostsToLower()
     HostsToLower transforms all host names to lowercase
 
-func (inventory *InventoryData) Match(m string) []*Host
-    Match looks for a hosts that match the pattern
+func (inventory *InventoryData) Match(pattern string) []*Host
+    Match looks for hosts that match the pattern Deprecated: Use `MatchHosts`,
+    which does proper error handling
+
+func (inventory *InventoryData) MatchGroups(pattern string) (map[string]*Group, error)
+    MatchGroups looks for groups that match the pattern
+
+func (inventory *InventoryData) MatchHosts(pattern string) (map[string]*Host, error)
+    MatchHosts looks for hosts that match the pattern
 
 func (inventory *InventoryData) Reconcile()
-    Reconcile ensures inventory basic rules, run after updates After initial
-    inventory file processing, only direct relationships are set
+    Reconcile ensures inventory basic rules, run after updates. After initial
+    inventory file processing, only direct relationships are set.
 
     This method:
 
