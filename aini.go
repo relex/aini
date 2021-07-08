@@ -77,11 +77,12 @@ func Parse(r io.Reader) (*InventoryData, error) {
 	return inventory, nil
 }
 
-// Match looks for a hosts that match the pattern
-func (inventory *InventoryData) Match(m string) []*Host {
+// Match looks for hosts that match the pattern
+// Deprecated: Use `MatchHosts`, which does proper error handling
+func (inventory *InventoryData) Match(pattern string) []*Host {
 	matchedHosts := make([]*Host, 0)
 	for _, host := range inventory.Hosts {
-		if m, err := path.Match(m, host.Name); err == nil && m {
+		if m, err := path.Match(pattern, host.Name); err == nil && m {
 			matchedHosts = append(matchedHosts, host)
 		}
 	}
