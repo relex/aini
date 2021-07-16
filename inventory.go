@@ -29,7 +29,7 @@ func (inventory *InventoryData) Reconcile() {
 	for _, host := range inventory.Hosts {
 		for _, group := range host.directGroups {
 			inventory.Groups[group.Name] = group
-			for _, ancestor := range group.getAncestors() {
+			for _, ancestor := range group.ListParentGroupsOrdered() {
 				inventory.Groups[ancestor.Name] = ancestor
 			}
 		}
@@ -38,7 +38,7 @@ func (inventory *InventoryData) Reconcile() {
 	// Calculate intergroup relationships
 	for _, group := range inventory.Groups {
 		group.directParents[allGroup.Name] = allGroup
-		for _, ancestor := range group.getAncestors() {
+		for _, ancestor := range group.ListParentGroupsOrdered() {
 			group.Parents[ancestor.Name] = ancestor
 			ancestor.Children[group.Name] = group
 		}
@@ -122,35 +122,6 @@ func (inventory *InventoryData) getOrCreateHost(hostName string) *Host {
 	}
 	inventory.Hosts[hostName] = h
 	return h
-}
-
-// getAncestors returns all Ancestors of a given group in level order
-func (group *Group) getAncestors() []*Group {
-	result := make([]*Group, 0)
-	if len(group.directParents) == 0 {
-		return result
-	}
-	visited := map[string]struct{}{group.Name: {}}
-
-	for queue := GroupMapListValues(group.directParents); ; {
-		group := queue[0]
-		copy(queue, queue[1:])
-		queue = queue[:len(queue)-1]
-		if _, ok := visited[group.Name]; ok {
-			if len(queue) == 0 {
-				return result
-			}
-			continue
-		}
-		visited[group.Name] = struct{}{}
-		parentList := GroupMapListValues(group.directParents)
-		result = append(result, group)
-		queue = append(queue, parentList...)
-
-		if len(queue) == 0 {
-			return result
-		}
-	}
 }
 
 // addValues fills `to` map with values from `from` map
