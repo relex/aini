@@ -1,6 +1,14 @@
 package aini
 
+import "sync"
+
 // Inventory-related helper methods
+
+var mapPool = sync.Pool{
+    New: func() interface{} {
+        return make(map[string]string)
+    },
+}
 
 // Reconcile ensures inventory basic rules, run after updates.
 // After initial inventory file processing, only direct relationships are set.
@@ -126,10 +134,26 @@ func (inventory *InventoryData) getOrCreateHost(hostName string) *Host {
 
 // addValues fills `to` map with values from `from` map
 func addValues(to map[string]string, from map[string]string) {
-	for k, v := range from {
-		to[k] = v
-	}
+    // Get a map from the pool
+    m := mapPool.Get().(map[string]string)
+
+    // Copy values from `from` to `m`
+    for k, v := range from {
+        m[k] = v	
+    }
+
+    // Copy values from `m` to `to`
+    for k, v := range m {
+        to[k] = v
+    }
+
+    // Reset the map and put it back in the pool
+    for k := range m {
+        delete(m, k)
+    }
+    mapPool.Put(m)
 }
+
 
 // copyStringMap creates a non-deep copy of the map
 func copyStringMap(from map[string]string) map[string]string {
