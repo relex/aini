@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"io/ioutil"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -25,15 +25,15 @@ type Group struct {
 	Children map[string]*Group
 	Parents  map[string]*Group
 
-	directParents map[string]*Group
+	DirectParents map[string]*Group
 	// Vars set in inventory
-	inventoryVars map[string]string
+	InventoryVars map[string]string
 	// Vars set in group_vars
-	fileVars map[string]string
+	FileVars map[string]string
 	// Projection of all parent inventory variables
-	allInventoryVars map[string]string
+	AllInventoryVars map[string]string
 	// Projection of all parent group_vars variables
-	allFileVars map[string]string
+	AllFileVars map[string]string
 }
 
 // Host represents ansible host
@@ -43,16 +43,16 @@ type Host struct {
 	Vars   map[string]string
 	Groups map[string]*Group
 
-	directGroups map[string]*Group
+	DirectGroups map[string]*Group
 	// Vars set in inventory
-	inventoryVars map[string]string
+	InventoryVars map[string]string
 	// Vars set in host_vars
-	fileVars map[string]string
+	FileVars map[string]string
 }
 
 // ParseFile parses Inventory represented as a file
 func ParseFile(f string) (*InventoryData, error) {
-	bs, err := ioutil.ReadFile(f)
+	bs, err := os.ReadFile(f)
 	if err != nil {
 		return &InventoryData{}, err
 	}
@@ -143,7 +143,7 @@ func hostMapToLower(hosts map[string]*Host, keysOnly bool) map[string]*Host {
 func (inventory *InventoryData) GroupsToLower() {
 	inventory.Groups = groupMapToLower(inventory.Groups, false)
 	for _, host := range inventory.Hosts {
-		host.directGroups = groupMapToLower(host.directGroups, true)
+		host.DirectGroups = groupMapToLower(host.DirectGroups, true)
 		host.Groups = groupMapToLower(host.Groups, true)
 	}
 }
@@ -162,7 +162,7 @@ func groupMapToLower(groups map[string]*Group, keysOnly bool) map[string]*Group 
 		groupname = strings.ToLower(groupname)
 		if !keysOnly {
 			group.Name = groupname
-			group.directParents = groupMapToLower(group.directParents, true)
+			group.DirectParents = groupMapToLower(group.DirectParents, true)
 			group.Parents = groupMapToLower(group.Parents, true)
 			group.Children = groupMapToLower(group.Children, true)
 		}

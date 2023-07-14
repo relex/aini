@@ -44,13 +44,13 @@ func (group *Group) MatchGroupsOrdered(pattern string) ([]*Group, error) {
 
 // ListGroupsOrdered returns all ancestor groups of a given host in level order
 func (host *Host) ListGroupsOrdered() []*Group {
-	return listAncestorsOrdered(host.directGroups, nil, true)
+	return listAncestorsOrdered(host.DirectGroups, nil, true)
 }
 
 // ListParentGroupsOrdered returns all ancestor groups of a given group in level order
 func (group *Group) ListParentGroupsOrdered() []*Group {
 	visited := map[string]struct{}{group.Name: {}}
-	return listAncestorsOrdered(group.directParents, visited, group.Name != "all")
+	return listAncestorsOrdered(group.DirectParents, visited, group.Name != "all")
 }
 
 // listAncestorsOrdered returns all ancestor groups of a given group map in level order
@@ -74,7 +74,7 @@ func listAncestorsOrdered(groups map[string]*Group, visited map[string]struct{},
 			continue
 		}
 		visited[group.Name] = struct{}{}
-		parentList := GroupMapListValues(group.directParents)
+		parentList := GroupMapListValues(group.DirectParents)
 		result = append(result, group)
 		queue = append(queue, parentList...)
 	}
