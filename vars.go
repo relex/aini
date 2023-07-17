@@ -41,11 +41,11 @@ type fileVarsGetter interface {
 }
 
 func (host *Host) getFileVars() map[string]string {
-	return host.fileVars
+	return host.FileVars
 }
 
 func (group *Group) getFileVars() map[string]string {
-	return group.fileVars
+	return group.FileVars
 }
 
 func (inventory InventoryData) getHostsMap() map[string]fileVarsGetter {
@@ -148,8 +148,8 @@ func (inventory *InventoryData) reconcileVars() {
 			4. inventory host_vars/*
 	*/
 	for _, group := range inventory.Groups {
-		group.allInventoryVars = nil
-		group.allFileVars = nil
+		group.AllInventoryVars = nil
+		group.AllFileVars = nil
 	}
 	for _, group := range inventory.Groups {
 		group.Vars = make(map[string]string)
@@ -157,39 +157,39 @@ func (inventory *InventoryData) reconcileVars() {
 		group.populateFileVars()
 		// At this point we already "populated" all parent's inventory and file vars
 		// So it's fine to build Vars right away, without needing the second pass
-		group.Vars = copyStringMap(group.allInventoryVars)
-		addValues(group.Vars, group.allFileVars)
+		group.Vars = copyStringMap(group.AllInventoryVars)
+		addValues(group.Vars, group.AllFileVars)
 	}
 	for _, host := range inventory.Hosts {
 		host.Vars = make(map[string]string)
-		for _, group := range GroupMapListValues(host.directGroups) {
+		for _, group := range GroupMapListValues(host.DirectGroups) {
 			addValues(host.Vars, group.Vars)
 		}
-		addValues(host.Vars, host.inventoryVars)
-		addValues(host.Vars, host.fileVars)
+		addValues(host.Vars, host.InventoryVars)
+		addValues(host.Vars, host.FileVars)
 	}
 }
 
 func (group *Group) populateInventoryVars() {
-	if group.allInventoryVars != nil {
+	if group.AllInventoryVars != nil {
 		return
 	}
-	group.allInventoryVars = make(map[string]string)
-	for _, parent := range GroupMapListValues(group.directParents) {
+	group.AllInventoryVars = make(map[string]string)
+	for _, parent := range GroupMapListValues(group.DirectParents) {
 		parent.populateInventoryVars()
-		addValues(group.allInventoryVars, parent.allInventoryVars)
+		addValues(group.AllInventoryVars, parent.AllInventoryVars)
 	}
-	addValues(group.allInventoryVars, group.inventoryVars)
+	addValues(group.AllInventoryVars, group.InventoryVars)
 }
 
 func (group *Group) populateFileVars() {
-	if group.allFileVars != nil {
+	if group.AllFileVars != nil {
 		return
 	}
-	group.allFileVars = make(map[string]string)
-	for _, parent := range GroupMapListValues(group.directParents) {
+	group.AllFileVars = make(map[string]string)
+	for _, parent := range GroupMapListValues(group.DirectParents) {
 		parent.populateFileVars()
-		addValues(group.allFileVars, parent.allFileVars)
+		addValues(group.AllFileVars, parent.AllFileVars)
 	}
-	addValues(group.allFileVars, group.fileVars)
+	addValues(group.AllFileVars, group.FileVars)
 }

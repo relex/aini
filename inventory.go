@@ -23,11 +23,11 @@ func (inventory *InventoryData) Reconcile() {
 
 	allGroup := inventory.getOrCreateGroup("all")
 	ungroupedGroup := inventory.getOrCreateGroup("ungrouped")
-	ungroupedGroup.directParents[allGroup.Name] = allGroup
+	ungroupedGroup.DirectParents[allGroup.Name] = allGroup
 
 	// First, ensure that inventory.Groups contains all the groups
 	for _, host := range inventory.Hosts {
-		for _, group := range host.directGroups {
+		for _, group := range host.DirectGroups {
 			inventory.Groups[group.Name] = group
 			for _, ancestor := range group.ListParentGroupsOrdered() {
 				inventory.Groups[ancestor.Name] = ancestor
@@ -37,7 +37,7 @@ func (inventory *InventoryData) Reconcile() {
 
 	// Calculate intergroup relationships
 	for _, group := range inventory.Groups {
-		group.directParents[allGroup.Name] = allGroup
+		group.DirectParents[allGroup.Name] = allGroup
 		for _, ancestor := range group.ListParentGroupsOrdered() {
 			group.Parents[ancestor.Name] = ancestor
 			ancestor.Children[group.Name] = group
@@ -47,7 +47,7 @@ func (inventory *InventoryData) Reconcile() {
 	// Now set hosts for groups and groups for hosts
 	for _, host := range inventory.Hosts {
 		host.Groups[allGroup.Name] = allGroup
-		for _, group := range host.directGroups {
+		for _, group := range host.DirectGroups {
 			group.Hosts[host.Name] = host
 			host.Groups[group.Name] = group
 			for _, parent := range group.Parents {
@@ -64,7 +64,7 @@ func (inventory *InventoryData) Reconcile() {
 func (host *Host) clearData() {
 	host.Groups = make(map[string]*Group)
 	host.Vars = make(map[string]string)
-	for _, group := range host.directGroups {
+	for _, group := range host.DirectGroups {
 		group.clearData(make(map[string]struct{}, len(host.Groups)))
 	}
 }
@@ -77,10 +77,10 @@ func (group *Group) clearData(visited map[string]struct{}) {
 	group.Parents = make(map[string]*Group)
 	group.Children = make(map[string]*Group)
 	group.Vars = make(map[string]string)
-	group.allInventoryVars = nil
-	group.allFileVars = nil
+	group.AllInventoryVars = nil
+	group.AllFileVars = nil
 	visited[group.Name] = struct{}{}
-	for _, parent := range group.directParents {
+	for _, parent := range group.DirectParents {
 		parent.clearData(visited)
 	}
 }
@@ -97,9 +97,9 @@ func (inventory *InventoryData) getOrCreateGroup(groupName string) *Group {
 		Children: make(map[string]*Group),
 		Parents:  make(map[string]*Group),
 
-		directParents: make(map[string]*Group),
-		inventoryVars: make(map[string]string),
-		fileVars:      make(map[string]string),
+		DirectParents: make(map[string]*Group),
+		InventoryVars: make(map[string]string),
+		FileVars:      make(map[string]string),
 	}
 	inventory.Groups[groupName] = g
 	return g
@@ -116,9 +116,9 @@ func (inventory *InventoryData) getOrCreateHost(hostName string) *Host {
 		Groups: make(map[string]*Group),
 		Vars:   make(map[string]string),
 
-		directGroups:  make(map[string]*Group),
-		inventoryVars: make(map[string]string),
-		fileVars:      make(map[string]string),
+		DirectGroups:  make(map[string]*Group),
+		InventoryVars: make(map[string]string),
+		FileVars:      make(map[string]string),
 	}
 	inventory.Hosts[hostName] = h
 	return h

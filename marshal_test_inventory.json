@@ -1,0 +1,113 @@
+{
+    "Groups": {
+        "Animals": {
+            "Name": "Animals",
+            "Vars": {},
+            "InventoryVars": {},
+            "FileVars": {},
+            "AllInventoryVars": {},
+            "AllFileVars": {},
+            "Hosts": {
+                "ET": null,
+                "Lion": null
+            },
+            "Children": {
+                "Cats": null
+            },
+            "Parents": {
+                "all": null
+            },
+            "DirectParents": {
+                "all": null
+            }
+        },
+        "Cats": {
+            "Name": "Cats",
+            "Vars": {},
+            "InventoryVars": {},
+            "FileVars": {},
+            "AllInventoryVars": {},
+            "AllFileVars": {},
+            "Hosts": {
+                "Lion": null
+            },
+            "Children": {},
+            "Parents": {
+                "Animals": null,
+                "all": null
+            },
+            "DirectParents": {
+                "Animals": null,
+                "all": null
+            }
+        },
+        "all": {
+            "Name": "all",
+            "Vars": {},
+            "InventoryVars": {},
+            "FileVars": {},
+            "AllInventoryVars": {},
+            "AllFileVars": {},
+            "Hosts": {
+                "ET": null,
+                "Lion": null
+            },
+            "Children": {
+                "Animals": null,
+                "Cats": null,
+                "ungrouped": null
+            },
+            "Parents": {},
+            "DirectParents": {
+                "all": null
+            }
+        },
+        "ungrouped": {
+            "Name": "ungrouped",
+            "Vars": {},
+            "InventoryVars": {},
+            "FileVars": {},
+            "AllInventoryVars": {},
+            "AllFileVars": {},
+            "Hosts": {},
+            "Children": {},
+            "Parents": {
+                "all": null
+            },
+            "DirectParents": {
+                "all": null
+            }
+        }
+    },
+    "Hosts": {
+        "ET": {
+            "Name": "ET",
+            "Port": 22,
+            "Vars": {},
+            "InventoryVars": {},
+            "FileVars": {},
+            "Groups": {
+                "Animals": null,
+                "all": null
+            },
+            "DirectGroups": {
+                "Animals": null
+            }
+        },
+        "Lion": {
+            "Name": "Lion",
+            "Port": 22,
+            "Vars": {},
+            "InventoryVars": {},
+            "FileVars": {},
+            "Groups": {
+                "Animals": null,
+                "Cats": null,
+                "all": null
+            },
+            "DirectGroups": {
+                "Cats": null
+            }
+        }
+    }
+}
