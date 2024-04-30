@@ -160,3 +160,59 @@ func main() {
     _ = len(inventory.Groups["all"].Hosts) == 2          // true
 }
 ```
+
+## Command-line Tool
+
+```
+go install github.com/relex/aini/cmd/ainidump@latest
+ainidump ~/my-playbook/inventory/ansible-hosts myhost*
+```
+
+Host and group variable files in the inventory directory are always loaded. The result is in JSON:
+- Host's groups and Group's parents are ordered by level from bottom to top
+- Rest are ordered by names
+
+```json
+{
+    "Hosts": [
+        {
+            "Name": "myhost1.domain",
+            "Groups": [
+                "myhosts",
+                "companyhosts",
+                "india",
+                "all"
+            ],
+            "Vars": {
+                "ansible_host": "1.2.3.4",
+                "region": "india"
+            }
+        },
+        {
+            "Name": "myhost2.domain",
+            // ...
+        }
+    ],
+    "Groups": [
+        {
+            "Name": "companyhosts",
+            "Parents": [
+                "india",
+                "all"
+            ],
+            "Descendants": [
+                "myhosts",
+                "otherhosts"
+            ],
+            "Hosts": [
+                "myhost1.domain",
+                "myhost2.domain",
+                "myhost3.domain"
+            ],
+            "Vars": {
+                "region": "india",
+            }
+        }
+    ]
+}
+```
