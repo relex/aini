@@ -163,9 +163,14 @@ func main() {
 
 ## Command-line Tool
 
-```
+```bash
 go install github.com/relex/aini/cmd/ainidump@latest
-ainidump ~/my-playbook/inventory/ansible-hosts myhost*
+```
+
+#### Dump entire inventory
+
+```bash
+ainidump ~/my-playbook/inventory/ansible-hosts
 ```
 
 Host and group variable files in the inventory directory are always loaded. The result is in JSON:
@@ -216,3 +221,13 @@ Host and group variable files in the inventory directory are always loaded. The 
     ]
 }
 ```
+
+#### Match hosts by patterns
+
+Find hosts matched by Ansible [target patterns](https://docs.ansible.com/ansible/latest/inventory_guide/intro_patterns.html), works for both hostnames and group names.
+
+```bash
+ainidump ~/my-playbook/inventory/ansible-hosts 'recent[1-3]:extrahost*:&eu:!finland'
+```
+
+The result is a dictionary of hosts in the same format above.

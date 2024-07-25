@@ -10,12 +10,13 @@ import (
 	"strings"
 
 	"github.com/relex/aini"
+	"github.com/samber/lo"
 	"golang.org/x/exp/maps"
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintln(os.Stderr, "Usage: ainidump inventory_file host_or_group_pattern")
+	if len(os.Args) > 3 || len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "Usage: ainidump inventory_file [host_or_group_patterns]")
 		os.Exit(1)
 	}
 
@@ -40,46 +41,50 @@ func main() {
 		os.Exit(4)
 	}
 
-	pattern := os.Args[2]
+	if len(os.Args) == 2 {
+		result := exportResult(inventory.Hosts, inventory.Groups)
+		j, err := json.MarshalIndent(result, "", "    ")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(j))
+		return
+	}
 
-	matchedHostMap, err := inventory.MatchHosts(pattern)
+	patterns := os.Args[2]
+
+	matchedHostsMap, err := inventory.MatchHostsByPatterns(patterns)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to match hosts with pattern %s: %v\n", pattern, err)
+		fmt.Fprintf(os.Stderr, "Failed to match hosts with patterns %s: %v\n", patterns, err)
 		os.Exit(5)
 	}
-
-	matchedGroupMap, err := inventory.MatchGroups(pattern)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to match groups with pattern %s: %v\n", pattern, err)
-		os.Exit(6)
-	}
-
-	matchedHosts := maps.Values(matchedHostMap)
-	slices.SortFunc(matchedHosts, func(a, b *aini.Host) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-
-	result := exportResult(matchedHostMap, matchedGroupMap)
-	j, err := json.MarshalIndent(result, "", "    ")
+	j, err := json.MarshalIndent(lo.MapEntries(matchedHostsMap, func(name string, host *aini.Host) (string, ResultHost) {
+		return host.Name, ResultHost{
+			Name:   host.Name,
+			Groups: getGroupNames(host.ListGroupsOrdered()),
+			Vars:   host.Vars,
+		}
+	}), "", "    ")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(j))
 }
 
+type ResultHost struct {
+	Name   string
+	Groups []string
+	Vars   map[string]string
+}
+type ResultGroup struct {
+	Name        string
+	Parents     []string
+	Descendants []string
+	Hosts       []string
+	Vars        map[string]string
+}
+
 func exportResult(hostMap map[string]*aini.Host, groupMap map[string]*aini.Group) any {
-	type ResultHost struct {
-		Name   string
-		Groups []string
-		Vars   map[string]string
-	}
-	type ResultGroup struct {
-		Name        string
-		Parents     []string
-		Descendants []string
-		Hosts       []string
-		Vars        map[string]string
-	}
 	type Result struct {
 		Hosts  []ResultHost
 		Groups []ResultGroup
