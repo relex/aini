@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 3 || len(os.Args) < 2 {
+	if len(os.Args) < 2 || len(os.Args) > 3 {
 		fmt.Fprintln(os.Stderr, "Usage: ainidump inventory_file [host_or_group_patterns]")
 		os.Exit(1)
 	}
