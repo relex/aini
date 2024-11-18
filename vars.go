@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -106,18 +105,17 @@ func addVarsFromFile(currentVars map[string]string, path string) error {
 		// Group or Host doesn't exist in the inventory, ignoring
 		return nil
 	}
-	ext := filepath.Ext(path)
-	if ext != ".yaml" && ext != ".yml" {
-		return nil
-	}
-	f, err := ioutil.ReadFile(path)
+	f, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 	vars := make(map[string]interface{})
 	err = yaml.Unmarshal(f, &vars)
 	if err != nil {
-		return err
+		// XXX: file extensions dont matter in ansible, but if we cannot parse a file, its not a valid file
+		// dont return an error here so we can continue to walk
+		// should this parsing error really stop us from parsing more potential files?
+		return nil
 	}
 	for k, v := range vars {
 		switch v := v.(type) {
